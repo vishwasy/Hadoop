@@ -1,0 +1,52 @@
+package com.hadoop.mapreduce;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.map.TokenCounterMapper;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+
+public class wordcount {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		// TODO Auto-generated method stub
+		
+		//create conf object
+		
+		Configuration conf = new Configuration();
+		
+		//parsing user command line arguments by ignoring hadoop generic options...
+		String UserArgs[] = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		//create job object...
+		
+		Job myjob = new Job(conf, "word count");
+		
+		//Setting class info to job object
+		myjob.setJarByClass(wordcount.class);
+		myjob.setMapperClass(TokenCounterMapper.class);
+		myjob.setCombinerClass(IntSumReducer.class);
+		myjob.setReducerClass(IntSumReducer.class);
+	  myjob.setOutputKeyClass(Text.class);
+	  myjob.setOutputValueClass(IntWritable.class);
+		
+		//set the input and output
+		FileInputFormat.addInputPath(myjob, new Path(UserArgs[0]));
+		FileOutputFormat.setOutputPath(myjob, new Path(UserArgs[1]));
+		
+		//submit the job
+		System.exit(myjob.waitForCompletion(true)? 0 : 1);
+	}
+}
