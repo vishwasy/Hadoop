@@ -1,0 +1,68 @@
+package com.hadoop.mapreduce;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.map.InverseMapper;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+
+public class patentgrouping {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		//create conf object
+		Configuration conf = new Configuration();
+		conf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator", ",");
+
+		//parsing user command line arguments by ignoring hadoop generic options...
+		String UserArgs[] = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		//create job object...
+		Job myjob = new Job(conf, "word count");
+		
+		//Setting class info to job object
+		myjob.setJarByClass(patentgrouping.class);
+		myjob.setMapperClass(InverseMapper.class);
+		myjob.setCombinerClass(MyReducer.class);
+		myjob.setReducerClass(MyReducer.class);
+		myjob.setInputFormatClass(KeyValueTextInputFormat.class);
+	  myjob.setOutputKeyClass(Text.class);
+	  myjob.setOutputValueClass(Text.class);
+		
+		//set the input and output
+		FileInputFormat.addInputPath(myjob, new Path(UserArgs[0]));
+		FileOutputFormat.setOutputPath(myjob, new Path(UserArgs[1]));
+		
+	
+		//submit the job
+		System.exit(myjob.waitForCompletion(true)? 0 : 1);
+	}
+	
+	public static class MyReducer extends Reducer<Text, Text, Text, Text>
+	{
+		Text emitvalue = new Text();
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,InterruptedException
+		{
+		   String csv = "";
+		    for(Text value:values)
+		    {
+		    	if(csv.length() > 0)
+		    	csv += ",";
+		    	csv+= value.toString();
+		    }
+		  emitvalue.set(csv);  
+		  context.write(key, emitvalue);  
+		}
+	}
+}
