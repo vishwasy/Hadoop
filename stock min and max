@@ -1,0 +1,129 @@
+package com.hadoop.mapreduce;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+public class stockminmax {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		// TODO Auto-generated method stub
+		
+		//create conf objext
+		  
+		Configuration conf = new Configuration();
+		
+		//parsing user command line arguments by ignoring hadoop generic options...
+		String UserArgs[] = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		String UserOption = UserArgs[2].toLowerCase();
+		
+		Map<String, Integer> dimensions = new HashMap<String, Integer>();
+		dimensions.put("open", 3);
+		dimensions.put("high", 4);
+		dimensions.put("low", 5);
+		dimensions.put("close", 6);
+		dimensions.put("adj_close", 8);
+		
+		if(UserArgs.length < 3)
+		{
+			System.out.println("Usage: hadoop jar jarname classname input output options|low|high|low|close|adj_close");
+			System.exit(1);
+		}
+		
+		conf.setInt("stock.options", dimensions.get(UserOption));
+		//create job object...
+		
+		Job myjob = new Job(conf, "Stock Min Max");
+		
+		//Setting class info to job object
+		myjob.setJarByClass(stockminmax.class);
+		myjob.setMapperClass(MyMapper.class);
+	 	myjob.setReducerClass(MyReducer.class);
+		// partitioner, combiner. sorting etc...
+		
+		//setting output data-types of both map and reduce
+		myjob.setMapOutputKeyClass(Text.class);
+		myjob.setMapOutputValueClass(DoubleWritable.class);
+		myjob.setOutputKeyClass(Text.class);
+		myjob.setOutputValueClass(Text.class);
+		
+		//input and output formats
+		myjob.setInputFormatClass(TextInputFormat.class);
+		myjob.setOutputFormatClass(TextOutputFormat.class);
+		
+		//set the input and output
+		FileInputFormat.addInputPath(myjob,new Path(UserArgs[0]));
+		FileOutputFormat.setOutputPath(myjob, new Path(UserArgs[1]));
+		
+		//submit the job
+		System.exit(myjob.waitForCompletion(true)? 0 : 1);
+	}
+
+	
+	public static class MyMapper extends Mapper<LongWritable, Text, Text, DoubleWritable>
+	{
+		Text emitkey = new Text();
+		DoubleWritable emitvalue = new DoubleWritable();
+		int index = 0;
+		
+		public void setup(Context context)
+		{
+			index = Integer.valueOf(context.getConfiguration().get("stock.options"));
+		}
+		public void map(LongWritable key, Text value, Context context) throws IOException,InterruptedException
+		{
+			String record = value.toString();
+			String dataDim[] = record.split("\\t");
+			if(dataDim.length == 9)
+			{
+				String stockcode = dataDim[1];
+				double dimension = Double.valueOf(dataDim[index]);
+				emitkey.set(stockcode);
+				emitvalue.set(dimension);
+				context.write(emitkey,emitvalue);
+			}
+			
+		} 
+		
+	}
+	
+	public static class MyReducer extends Reducer<Text, DoubleWritable, Text, Text>
+	{
+	    Text emitvalue = new Text();
+		public void reduce(Text key, Iterable<DoubleWritable> values, Context context) throws IOException,InterruptedException
+		{
+		    double min = Double.MAX_VALUE;
+		    double max = Double.MIN_VALUE;
+			for(DoubleWritable value : values)
+			{
+				double current = value.get();
+				min = (min<current)?min:current;
+				max = (max>current)?max:current;
+				
+			}
+			String myvalue = min + "\t" + max ;
+		    emitvalue.set(myvalue);
+	        context.write(key,emitvalue);
+				
+		}
+	}
+}
