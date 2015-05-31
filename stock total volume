@@ -1,0 +1,83 @@
+package com.hadoop.mapreduce;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+public class stocktotalvolume {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		// TODO Auto-generated method stub
+		
+		//create conf object
+		
+		Configuration conf = new Configuration();
+		
+		//parsing user command line arguments by ignoring hadoop generic options...
+		String UserArgs[] = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		//create job object...
+		
+		Job myjob = new Job(conf, "Stock Total Volume");
+		
+		//Setting class info to job object
+		myjob.setJarByClass(stocktotalvolume.class);
+		myjob.setMapperClass(MyMapper.class);
+	 	myjob.setReducerClass(LongSumReducer.class);
+		// partitioner, combiner. sorting etc...
+		
+		//setting output datatypes of both map and reduce
+		myjob.setMapOutputKeyClass(Text.class);
+		myjob.setMapOutputValueClass(LongWritable.class);
+		myjob.setOutputKeyClass(Text.class);
+		myjob.setOutputValueClass(LongWritable.class);
+		
+		//input and output formats
+		myjob.setInputFormatClass(TextInputFormat.class);
+		myjob.setOutputFormatClass(TextOutputFormat.class);
+		
+		//set the input and output
+		FileInputFormat.addInputPath(myjob,new Path(UserArgs[0]));
+		FileOutputFormat.setOutputPath(myjob, new Path(UserArgs[1]));
+		
+		//submit the job
+		System.exit(myjob.waitForCompletion(true)? 0 : 1);
+	}
+
+	
+	public static class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable>
+	{
+		Text emitkey = new Text();
+		LongWritable emitvalue = new LongWritable();
+		public void map(LongWritable key, Text value, Context context) throws IOException,InterruptedException
+		{
+			String record = value.toString();
+			String dataDim[] = record.split("\\t");
+			if(dataDim.length == 9)
+			{
+				String stockcode = dataDim[1];
+				Long volume = Long.valueOf(dataDim[7]);
+				emitkey.set(stockcode);
+				emitvalue.set(volume);
+				context.write(emitkey,emitvalue);
+			}
+			
+		} 
+		
+	}
+}
