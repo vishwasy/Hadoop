@@ -1,0 +1,92 @@
+package com.hadoop.mapreduce;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.mapreduce.Job;
+
+
+public class TextPair implements WritableComparable<TextPair> {
+
+	/**
+	 * @param args
+	 */
+	private Text first;
+	private Text second;
+	
+	public TextPair()
+	{
+		set(new Text(), new Text());
+	}
+	
+	public TextPair(Text first, Text second)
+	{
+		set(first,second);
+	}
+	private void set(Text first, Text second) {
+		// TODO Auto-generated method stub
+		this.first = first;
+		this.second = second;
+	}
+
+	public Text getfirst()
+	{
+		return first;
+	}
+	
+	public Text getsecond()
+	{
+		return second;
+	}
+	
+	public void write(DataOutput out) throws IOException
+	{
+		first.write(out);
+		second.write(out);
+	}
+	
+	public void readFeilds(DataInput in) throws IOException
+	{
+		first.readFields(in);
+		second.readFields(in);
+	}
+	public int hashcode()
+	{
+         return first.hashCode() * second.hashCode();
+	}
+	
+	public boolean equals(Object o)
+	{
+		if(o instanceof TextPair)
+		{
+			TextPair tp = (TextPair)o;
+			return first.equals(tp.first) && second.equals(tp.second);	
+		}
+		return false;
+	}
+	
+	public String toString()
+	{
+		return first + "\t" + second; 
+	}
+	
+	public int compareTo(TextPair tp)
+	{
+		int cmp = first.compareTo(tp.first);
+		if(cmp!=0)
+			return cmp;
+		return second.compareTo(tp.second);
+	}
+}
