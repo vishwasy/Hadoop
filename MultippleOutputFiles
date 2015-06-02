@@ -1,0 +1,94 @@
+package com.hadoop.mapreduce;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+
+
+
+public class MultipleOutputFiles {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
+	{
+	
+		//create conf object
+		
+		Configuration conf = new Configuration();
+		
+		//parsing user command line arguments by ignoring hadoop generic options...
+		String UserArgs[] = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		//create job object...
+		
+		Job myjob = new Job(conf, "word count");
+		
+		//Setting class info to job object
+		myjob.setJarByClass(MultipleOutputFiles.class);
+		myjob.setMapperClass(StationidMapper.class);
+		myjob.setReducerClass(MultipleOutputsReducer.class);
+
+		//myjob.setInputFormatClass(KeyValueTextInputFormat.class);
+		myjob.setOutputKeyClass(Text.class);
+		myjob.setOutputValueClass(Text.class);
+	    
+		//set the input and output
+		FileInputFormat.addInputPath(myjob, new Path(UserArgs[0]));
+		FileOutputFormat.setOutputPath(myjob, new Path(UserArgs[1]));
+		
+		//submit the job
+		System.exit(myjob.waitForCompletion(true)? 0 : 1);
+		
+	}
+	
+	public static  class StationidMapper
+	   extends Mapper<LongWritable,Text,Text,Text>
+	{
+    
+    Text emitkey = new Text();
+	public void map(LongWritable key, Text value, Context context)
+	 throws IOException, InterruptedException
+	 {
+		String line = value.toString();
+		String stationid = line.substring(00,9);
+		emitkey.set(stationid);
+		context.write(emitkey, value);
+	 }
+	}
+	
+	public static class MultipleOutputsReducer extends Reducer<Text, Text, NullWritable, Text>
+	{
+		private MultipleOutputs<NullWritable,Text> multipleoutputs;
+		
+		protected void setup(Context context) throws IOException, InterruptedException
+		{
+			multipleoutputs =  new MultipleOutputs<NullWritable, Text>(context);
+		}
+		
+		protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException
+		{
+			for (Text value:values)
+			{
+				multipleoutputs.write(NullWritable.get(), value, key.toString());
+			}
+		}
+		protected void cleanup(Context context) throws IOException, InterruptedException
+		{
+			multipleoutputs.close();
+		}
+	}
+}
