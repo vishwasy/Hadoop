@@ -3,19 +3,9 @@ package com.hadoop.mapreduce;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.mapreduce.Job;
+
 
 
 public class TextPair implements WritableComparable<TextPair> {
@@ -57,7 +47,7 @@ public class TextPair implements WritableComparable<TextPair> {
 		second.write(out);
 	}
 	
-	public void readFeilds(DataInput in) throws IOException
+	public void readFields(DataInput in) throws IOException
 	{
 		first.readFields(in);
 		second.readFields(in);
